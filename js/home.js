@@ -20,7 +20,7 @@ function createPostElement(post) {
   // const titleElement = liElement.querySelector('[data-id="title"]');
   // if(titleElement) titleElement.textContent = post.title;
   setTextContent(liElement, '[data-id="title"]', post.title);
-  setTextContent(liElement, '[data-id="description"]', truncateText( post.description, 100));
+  setTextContent(liElement, '[data-id="description"]', truncateText(post.description, 100));
   setTextContent(liElement, '[data-id="author"]', post.author);
 
   // const descriptionElement = liElement.querySelector('[data-id="description"]');
@@ -58,12 +58,60 @@ function renderPostList(postList) {
   })
 }
 
+function handleFilterChange(filterName, filterValue) {
+  const url = new URL(window.location);
+  url.searchParams.set(filterName, filterValue);
+  history.pushState({}, '', url);
+
+}
+
+function handlePrevClick(e) {
+  e.preventDefault();
+  console.log('prev click')
+}
+
+function handleNextClick(e) {
+  e.preventDefault();
+  console.log('next click')
+}
+
+function initPagination() {
+  // bind click event for prev/next link
+  const ulPagination = document.getElementById('pagination');
+  if (!ulPagination) return;
+
+  const prevLink = ulPagination.firstElementChild?.firstElementChild
+  if(prevLink) {
+    prevLink.addEventListener('click', handlePrevClick)
+  }
+
+  const nextLink = ulPagination.lastElementChild?.lastElementChild
+  if(nextLink) {
+    nextLink.addEventListener('click', handleNextClick)
+  }
+}
+
+function initURL() {
+  const url = new URL(window.location);
+
+  if(!url.searchParams.get('_page')) url.searchParams.set('_page', 1)
+  if(!url.searchParams.get('_limit')) url.searchParams.set('_limit', 6)
+  // url.searchParams.set(filterName, filterValue);
+
+  history.pushState({}, '', url);
+}
+
 (async () => {
   try {
-    const queryParams = {
-      _page: 1,
-      _limit: 6,
-    }
+    initPagination();
+    initURL();
+
+    const queryParams = new URLSearchParams(window.location.search);
+
+    // const queryParams = {
+    //   _page: 1,
+    //   _limit: 6,
+    // }
     const { data, pagination } = await postApi.getAll(queryParams);
     renderPostList(data);
   } catch (error) {
