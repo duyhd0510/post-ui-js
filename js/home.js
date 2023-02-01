@@ -1,6 +1,6 @@
 import axiosClient from "./api/axiosClient";
 import postApi from "./api/postApi";
-import { setTextContent, truncateText } from "./utils";
+import { getUlPagination, setTextContent, truncateText } from "./utils";
 import dayjs from "dayjs";
 import relativeTime from 'dayjs/plugin/relativeTime';
 
@@ -52,41 +52,83 @@ function renderPostList(postList) {
   const ulElement = document.getElementById('postList');
   if (!ulElement) return;
 
+  ulElement.textContent = '';
+
   postList.forEach((post) => {
     const liElement = createPostElement(post);
     ulElement.appendChild(liElement);
   })
 }
 
-function handleFilterChange(filterName, filterValue) {
-  const url = new URL(window.location);
-  url.searchParams.set(filterName, filterValue);
-  history.pushState({}, '', url);
+function renderPagination(pagination) {
+  const ulPagination = getUlPagination();
+  if (!pagination || !ulPagination) return;
 
+  // calc totalPages
+  const { _page, _limit, _totalRows } = pagination;
+  const totalPages = Math.ceil(_totalRows / _limit);
+
+  // save page and totalPage to ulPagination
+  ulPagination.dataset.page = _page;
+  ulPagination.dataset.totalPages = totalPages;
+
+  // check if enable/disable prev/next link
+  if (_page <= 1) ulPagination.firstElementChild?.classList.add('disabled');
+  else ulPagination.firstElementChild?.classList.remove('disabled');
+
+  if (_page >= totalPages) ulPagination.lastElementChild?.classList.add('disabled');
+  else ulPagination.lastElementChild?.classList.remove('disabled');
+}
+
+async function handleFilterChange(filterName, filterValue) {
+  try {
+    const url = new URL(window.location);
+    url.searchParams.set(filterName, filterValue);
+    history.pushState({}, '', url);
+
+    const { data, pagination } = await postApi.getAll(url.searchParams);
+    renderPostList(data);
+    renderPagination(pagination);
+  } catch (error) {
+    console.log('failed to fetch post list', error);
+  }
 }
 
 function handlePrevClick(e) {
   e.preventDefault();
-  console.log('prev click')
+  const ulPagination = getUlPagination();
+  if (!ulPagination) return;
+
+  const page = Number.parseInt(ulPagination.dataset.page) || 1;
+  if (page <= 1) return;
+
+  handleFilterChange('_page', page - 1);
 }
 
 function handleNextClick(e) {
   e.preventDefault();
-  console.log('next click')
+  const ulPagination = getUlPagination();
+  if (!ulPagination) return;
+
+  const page = Number.parseInt(ulPagination.dataset.page) || 1;
+  const totalPages = ulPagination.dataset.totalPages;
+  if (page >= totalPages) return;
+
+  handleFilterChange('_page', page + 1);
 }
 
 function initPagination() {
   // bind click event for prev/next link
-  const ulPagination = document.getElementById('pagination');
+  const ulPagination = getUlPagination();
   if (!ulPagination) return;
 
   const prevLink = ulPagination.firstElementChild?.firstElementChild
-  if(prevLink) {
+  if (prevLink) {
     prevLink.addEventListener('click', handlePrevClick)
   }
 
   const nextLink = ulPagination.lastElementChild?.lastElementChild
-  if(nextLink) {
+  if (nextLink) {
     nextLink.addEventListener('click', handleNextClick)
   }
 }
@@ -94,8 +136,8 @@ function initPagination() {
 function initURL() {
   const url = new URL(window.location);
 
-  if(!url.searchParams.get('_page')) url.searchParams.set('_page', 1)
-  if(!url.searchParams.get('_limit')) url.searchParams.set('_limit', 6)
+  if (!url.searchParams.get('_page')) url.searchParams.set('_page', 1)
+  if (!url.searchParams.get('_limit')) url.searchParams.set('_limit', 6)
   // url.searchParams.set(filterName, filterValue);
 
   history.pushState({}, '', url);
@@ -114,6 +156,7 @@ function initURL() {
     // }
     const { data, pagination } = await postApi.getAll(queryParams);
     renderPostList(data);
+    renderPagination(pagination);
   } catch (error) {
     console.log('get all failed', error);
   }
