@@ -33,8 +33,31 @@ export function createPostElement(post) {
   // attach events
   const divElement = liElement.firstElementChild;
   if (divElement) {
-    divElement.addEventListener('click', () => {
+    divElement.addEventListener('click', (event) => {
+      const menu = liElement.querySelector('[data-id="menu"]');
+      if (menu && menu.contains(event.target)) return
       window.location.assign(`/post-detail.html?id=${post.id}`)
+    })
+  }
+
+  // add click event for edit button
+  const editButton = liElement.querySelector('[data-id="edit"]');
+  if (editButton) {
+    editButton.addEventListener('click', (e) => {
+      // e.stopPropagation();
+      window.location.assign(`/add-edit-post.html?id=${post.id}`)
+    })
+  }
+
+  const removeButton = liElement.querySelector('[data-id="remove"]');
+  if (removeButton) {
+    removeButton.addEventListener('click', (e) => {
+      const customEvent = new CustomEvent('post-delete', {
+        bubbles: true,
+        detail: post,
+      })
+
+      removeButton.dispatchEvent(customEvent);
     })
   }
 
